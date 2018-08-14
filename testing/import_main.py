@@ -101,7 +101,7 @@ for filename in os.listdir(settings.HOME + 'alerts/'):
                              host='" + settings.DB_HOST + "'")
     conn.autocommit = True
     cur = conn.cursor()
-    sql = """INSERT INTO idea1
+    sql = """INSERT INTO actual
 VALUES (
 '""" + line['ID'] + """',
 '""" + line['DetectTime'] + """',

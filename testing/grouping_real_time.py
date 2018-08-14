@@ -19,7 +19,7 @@ conn.autocommit = True
 
 print("Ideal match")
 sql = "SELECT unnest(sourceip) \
-        FROM idea1 \
+        FROM actual \
         WHERE ( category && ARRAY" + str(idea['Category']) + ") \
             AND ( targetport = ARRAY" + str(idea['Target'][0]['Port']) + " ) \
             AND ( targetip && ARRAY[inet '" + "', inet '".join(idea['Target'][0]['IP4']) + "']) \
@@ -44,7 +44,7 @@ combo_arr = ['Attempt.Exploit',
 for combo_type in combo_arr:
     print("\nCombination match: Recon.Scanning + " + combo_type)
     sql = "SELECT unnest(sourceip) \
-            FROM idea1 \
+            FROM actual \
             WHERE (( 'Recon.Scanning' = ANY (category) \
                 AND '" + combo_type + "' = ANY (ARRAY" + str(idea['Category']) + ") ) \
                 OR ( '" + combo_type + "' = ANY (category) \
@@ -69,7 +69,7 @@ source = []
 for i in idea['Source']:
     if 'IP4' in i:
         source.extend(i['IP4'])
-sourceIP = str(source).replace('[', '{').replace(']', '}').replace("'", "") 
+sourceIP = str(source).replace('[', '').replace(']', '')#.replace("'", "") 
 
 target = []
 targetp = []
@@ -78,8 +78,8 @@ for i in idea['Target']:
         target.extend(i['IP4'])
     if 'Port' in i:
         targetp.extend(i['Port'])
-targetIP = str(target).replace('[', '{').replace(']', '}').replace("'", "")   
-targetPort = str(targetp).replace('[', '{').replace(']', '}').replace("'", "")  
+targetIP = str(target).replace('[', '').replace(']', '')#.replace("'", "")   
+targetPort = str(targetp).replace('[', '').replace(']', '').replace("'", "")  
 
 cur.execute("""drop function if exists array_intersect(int[], int[]);
 create function array_intersect(a1 int[], a2 int[]) returns int[] as $$
@@ -106,22 +106,30 @@ for ip in source:
         FROM features \
         WHERE sourceip = '" + str(ip) + "';")
     result = cur.fetchone()
+    if result == None:
+        result = ['', False, False, False, False]
+
+    cur.execute("SELECT * FROM features \
+                     WHERE sourceip = '" + str(ip) + "' \
+                         AND cc = " + str(result[1]) + " \
+                         AND bot = " + str(result[2]) + " \
+                         AND port_23_2323 = " + str(result[3]) + " \
+                         AND spam = " + str(result[4]) + ";")
+    result = cur.fetchall()
+    if result == (1,):
+        result = True
+    else: 
+        result = False
 
     sql = "SELECT unnest(sourceip)\
             FROM history \
             WHERE '" + str(ip) + "' = ANY (sourceip) \
-                AND (('" + str(sourceIP) + "' == sourceip ) \
-                    OR \
-                    ( SELECT sourceip FROM features \
-                        WHERE cc = " + str(result[1]) + " \
-                        AND bot = " + str(result[2]) + " \
-                        AND port_23_2323 = " + str(result[3]) + " \
-                        AND spam = " + str(result[4]) + "\
-                    )) \
-                AND ( array_length( array_intersect(" + str(targetP) + ", targetport), 1) > 3) ) \
-                AND floor(log(array_length(targetip, 1))+1) = floor(log(array_length(" + str(targetIP) + ", 1))+1) \
+                AND ((ARRAY[" + str(sourceIP) + "]::inet[] = sourceip ) \
+                    OR " + str(result) + ") \
+                AND ( array_length( array_intersect(ARRAY[" + str(targetPort) + "], targetport), 1) > 3) \
+                AND floor(log(array_length(targetip, 1))+1) = floor(log(array_length(ARRAY[" + str(targetIP) + "]::inet[], 1))+1) \
                 AND id != '" + str(idea['ID']) + "';"
-
+    
     cur.execute(sql)
     rows = cur.fetchall()
     combo = set()

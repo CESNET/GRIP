@@ -4,6 +4,8 @@ import json
 import psycopg2
 import settings
 
+from get_attach_list_db import get_list
+
 
 conn = psycopg2.connect("dbname='" + settings.DB_NAME + "'\
                          user='" + settings.DB_USER + "'\
@@ -68,18 +70,12 @@ for row in rows:
 
 #-----------------------------------------------------------------------------------------------
 
-attach_arr = ['ET SCAN Potential SSH Scan OUTBOUND',
-              'SipVicious Brute Force SIP Tool',
-              'Netcore/Netis Router Backdoor Communication Attempt',
-              'ET DOS Possible NTP DDoS Inbound Frequent Un-Authed MON_LIST Requests IMPL 0x03',
-              'ET DOS Possible Memcached DDoS Amplification Query (set)',
-              'Version Request (UDP)',
-              'Comm. with host known as malware source']
+attach_arr = get_list()
 
 for attach_type in attach_arr:
     print("\nAttachment match: " + attach_type)
     sql = """SELECT sourceip
-             FROM uniq_ip
+             FROM actual
              WHERE ( attach LIKE '%""" + attach_type + """%' )
                  ;"""
 
@@ -87,21 +83,54 @@ for attach_type in attach_arr:
     rows = cur.fetchall()
     ips = set()
     for row in rows:
-        ips.add(row[0])
+        ips.update(row[0])
 
     print(str(ips))
 
 
 #-----------------------------------------------------------------------------------------------
 
-print("Botnets C&C")
+print("\nBotnets & C&C")
+sql = """SELECT sourceip
+         FROM features
+         WHERE ( bot = True OR cc = True );"""
+
+botnet = set()
+cur.execute(sql)
+rows = cur.fetchall()
+for row in rows:
+    botnet.add(row[0])
+
+print(str(botnet))
+
+#-----------------------------------------------------------------------------------------------
+
+print("\nBotnet MIRAI")
 sql = """SELECT sourceip
          FROM uniq_ip
          WHERE ( 23 = ANY (targetport) AND 2323 = ANY (targetport) )
              AND ( 'Recon.Scanning' = ANY (category) OR 'Attempt.Login' = ANY (category));"""
 
-port23 = set()
+mirai = set()
 cur.execute(sql)
 rows = cur.fetchall()
 for row in rows:
-    port23.add(row[0])
+    mirai.add(row[0])
+
+print(str(mirai))
+
+#-----------------------------------------------------------------------------------------------
+
+print("\nBotnet MIRAI from features")
+sql = """SELECT sourceip
+         FROM features
+         WHERE ( port_23_2323 = True 
+             AND ( bot = True OR cc = True ));"""
+
+mirai = set()
+cur.execute(sql)
+rows = cur.fetchall()
+for row in rows:
+    mirai.add(row[0])
+
+print(str(mirai))
