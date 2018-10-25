@@ -1,0 +1,30 @@
+APP_NAME = 'GRIP'
+
+CELERY = {
+    'name': 'app_name',
+    'broker': 'amqp://user:pass@host:port'
+}
+
+RABBITMQ = {
+    'host': 'host',
+    'user': 'user',
+    'password': 'pass',
+    'port': 0,
+    'vhost': '/vhost',
+    'queue': 'queue_name',
+}
+
+NEO4J = {
+    'host': 'bolt://host:port',
+    'user': 'user',
+    'password': 'pass',
+}
+
+DB_NAME = 'db'
+DB_USER = 'user'
+DB_PASS = 'pass'
+DB_HOST = 'host'
+
+PWD = '/path/to/pwd/dir'
+HOME = '/path/to/home/dir'
+
